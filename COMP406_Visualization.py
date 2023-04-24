@@ -32,28 +32,27 @@ def get_train_line(station):
     return station["station_descriptive_name"].split("(")[-1].replace(")", "").strip()
 
 # Create a dictionary to map station names to train lines
-station_name_to_line = {station["station_name"].lower(): get_train_line(station) for station in station_data}
+station_name_to_line = {
+    station["station_name"].lower(): {
+        "train_line": get_train_line(station),
+        "location": station["location"]
+    }
+    for station in station_data
+}
+
 
 def fuzzy_match_station(name):
     best_match = max(station_name_to_line, key=lambda x: fuzz.token_sort_ratio(name.lower(), x))
     return station_name_to_line[best_match]
 
-# Add train_line column to both dataframes
-#for df in [rides_df_2019, rides_df_2020]:
-#    df['train_line'] = df['stationname'].apply(fuzzy_match_station)
-
-# Convert 'rides' column to numeric
-#rides_df_2019['rides'] = pd.to_numeric(rides_df_2019['rides'])
-#rides_df_2020['rides'] = pd.to_numeric(rides_df_2020['rides'])
-
-# Convert date column to datetime index
-#rides_df_2019.set_index(pd.to_datetime(rides_df_2019['date']), inplace=True)
-#rides_df_2020.set_index(pd.to_datetime(rides_df_2020['date']), inplace=True)
 
 for df in [rides_df_2019, rides_df_2020, rides_df_2021, rides_df_2022]:
-    df['train_line'] = df['stationname'].apply(fuzzy_match_station)
+    df['train_line'] = df['stationname'].apply(lambda x: fuzzy_match_station(x)['train_line'])
+    df['location'] = df['stationname'].apply(lambda x: fuzzy_match_station(x)['location'])
     df['rides'] = pd.to_numeric(df['rides'])
     df.set_index(pd.to_datetime(df['date']), inplace=True)
+
+print(rides_df_2019)
 
 # Group the data by month and sum the rides for each month
 monthly_rides_2019 = rides_df_2019['rides'].resample('M').sum()
